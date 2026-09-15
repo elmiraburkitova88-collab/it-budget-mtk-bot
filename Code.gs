@@ -6,8 +6,16 @@
  *  2. Заполнить SCRIPT PROPERTIES: BOT_TOKEN (токен от @BotFather).
  *  3. Выполнить setup() один раз — создаст листы "Каталог", "Заявки", "Позиции".
  *  4. Развернуть как веб-приложение (Deploy → New deployment → Web app),
- *     доступ "Anyone". Скопировать exec-URL.
- *  5. Выполнить installWebhook() — привяжет бота к этому URL.
+ *     доступ "Anyone". Скопировать exec-URL и сохранить его в свойстве
+ *     WEBAPP_URL (без этого сработает менее надёжное автоопределение адреса).
+ *     Веб-приложение нужно только для открытия формы (Mini App) из Telegram.
+ *  5. Бот получает сообщения через ОПРОС (polling), а не через webhook:
+ *     Google Apps Script веб-приложения всегда отвечают редиректом 302 на
+ *     запрос к /exec, а Telegram не следует за редиректами при доставке
+ *     вебхуков — поэтому setWebhook() для этого бэкенда не работает.
+ *     Выполните startPolling() один раз — она удалит вебхук (если был) и
+ *     создаст триггер по времени, который каждую минуту вызывает
+ *     pollUpdates() и забирает новые сообщения через getUpdates().
  */
 
 // ==================== НАСТРОЙКИ ====================
@@ -112,15 +120,55 @@ function setup() {
   Logger.log('Листы созданы/проверены. Заполните "Каталог" реальными позициями IT-каталога.');
 }
 
-function installWebhook() {
-  var url = getWebAppUrl();
-  var resp = UrlFetchApp.fetch(
-    'https://api.telegram.org/bot' + getBotToken() + '/setWebhook?url=' + encodeURIComponent(url)
-  );
-  Logger.log(resp.getContentText());
+// ==================== ПОЛУЧЕНИЕ СООБЩЕНИЙ (POLLING) ====================
+//
+// Веб-приложения Google Apps Script всегда отвечают HTTP 302 (редирект на
+// script.googleusercontent.com) на запрос к /exec. Браузеры и большинство
+// HTTP-клиентов следуют за таким редиректом автоматически, но Telegram при
+// доставке webhook-обновлений редиректы не проверяет и считает 302 ошибкой
+// доставки — поэтому setWebhook() для этого бэкенда не работает. Вместо
+// этого бот сам опрашивает Telegram через getUpdates() по триггеру времени.
+
+function startPolling() {
+  // на всякий случай снимаем вебхук — getUpdates() и webhook несовместимы
+  UrlFetchApp.fetch('https://api.telegram.org/bot' + getBotToken() + '/deleteWebhook', { muteHttpExceptions: true });
+
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'pollUpdates') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('pollUpdates').timeBased().everyMinutes(1).create();
+
+  Logger.log('Опрос запущен: pollUpdates() будет выполняться каждую минуту.');
 }
 
-// ==================== ВХОДЯЩИЕ ЗАПРОСЫ ====================
+function stopPolling() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'pollUpdates') ScriptApp.deleteTrigger(t);
+  });
+  Logger.log('Триггер опроса удалён.');
+}
+
+function pollUpdates() {
+  var props = PropertiesService.getScriptProperties();
+  var offset = Number(props.getProperty('LAST_UPDATE_ID') || 0) + 1;
+
+  var resp = UrlFetchApp.fetch(
+    'https://api.telegram.org/bot' + getBotToken() + '/getUpdates?offset=' + offset + '&timeout=0',
+    { muteHttpExceptions: true }
+  );
+  var data = JSON.parse(resp.getContentText());
+  if (!data.ok || !data.result.length) return;
+
+  data.result.forEach(function (update) {
+    try {
+      handleTelegramUpdate(update);
+    } finally {
+      props.setProperty('LAST_UPDATE_ID', String(update.update_id));
+    }
+  });
+}
+
+// ==================== ВХОДЯЩИЕ ЗАПРОСЫ ВЕБ-ПРИЛОЖЕНИЯ ====================
 
 function doGet(e) {
   var dept = DEPARTMENTS[e.parameter.dept];
