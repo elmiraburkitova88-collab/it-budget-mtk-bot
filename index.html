@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Заявка IT в бюджет MTK — визуализация</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eaf4fb; --white:#ffffff; --primary:#0b5fa5; --primary-dark:#073a66;
+    --pad:#4fa8e0; --text:#16283a; --muted:#5b7185; --border:#d7e9f7;
+    --warn:#b9720a; --warn-bg:#fdf3e2; --ok:#1f8a57; --danger:#b23a3a; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  .page{max-width:900px;margin:0 auto;padding:28px 16px 60px;}
+  .intro h1{font-size:20px;color:var(--primary-dark);margin:0 0 8px;}
+  .intro p{font-size:13.5px;color:var(--muted);line-height:1.6;margin:0 0 6px;max-width:640px;}
+  .intro .tag{display:inline-flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+  .intro .tag span{background:#fff;border:1px solid var(--border);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--muted);}
+
+  .layout{display:flex;gap:24px;margin-top:22px;align-items:flex-start;flex-wrap:wrap;}
+
+  /* ---- phone frame (bot chat) ---- */
+  .phone{
+    width:100%;max-width:390px;background:#fff;border-radius:26px;border:8px solid #0c1622;
+    box-shadow:0 18px 40px rgba(11,60,102,0.18); overflow:hidden; flex:none;
+  }
+  .phone-top{
+    background:linear-gradient(160deg,#0b5fa5 0%,#0d76c9 55%,#1690db 100%);
+    color:#fff;padding:14px 14px 12px;display:flex;align-items:center;gap:10px;
+  }
+  .chip-mark{
+    width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,0.14);
+    border:1.5px solid rgba(255,255,255,0.55);display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .bot-name{font-size:13.5px;font-weight:600;line-height:1.3;flex:1;}
+  .bot-name span{display:block;font-weight:400;font-size:11px;color:rgba(255,255,255,0.8);}
+  #resetBtn{
+    background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.4);color:#fff;
+    width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px;line-height:1;
+  }
+  .chat-body{
+    height:560px;overflow-y:auto;padding:14px 12px;background:
+      repeating-linear-gradient(0deg,#f6fafd 0px,#f6fafd 39px,#eff6fb 40px);
+  }
+  .msg{
+    background:#fff;border:1px solid var(--border);border-radius:14px 14px 14px 4px;
+    padding:10px 12px;max-width:88%;font-size:13.3px;line-height:1.55;margin:0 0 6px;
+    box-shadow:0 1px 2px rgba(11,95,165,0.06); white-space:pre-wrap;
+  }
+  .kb{display:flex;flex-direction:column;gap:6px;max-width:88%;margin:0 0 16px;}
+  .kb button{
+    background:#fff;border:1.4px solid var(--primary);color:var(--primary);border-radius:10px;
+    padding:9px 12px;font-size:12.8px;font-weight:600;cursor:pointer;text-align:left;font-family:inherit;
+  }
+  .kb button:hover{background:#f0f8ff;}
+  .kb button:disabled{opacity:.4;cursor:default;background:#fff;}
+  .kb button.chosen{background:var(--primary);color:#fff;}
+
+  /* ---- side notes column ---- */
+  .side{flex:1;min-width:260px;}
+  .side .card{
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:14px;font-size:12.8px;color:var(--muted);line-height:1.6;
+  }
+  .side .card h3{margin:0 0 8px;font-size:13px;color:var(--primary-dark);}
+  .side .card code{background:var(--bg);border-radius:5px;padding:1px 5px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
+
+  /* ---- Mini App sheet (Form.html reproduced) ---- */
+  .overlay{position:fixed;inset:0;background:rgba(8,20,34,0.35);opacity:0;pointer-events:none;transition:opacity .25s;z-index:40;}
+  .overlay.open{opacity:1;pointer-events:auto;}
+  .sheet{
+    position:fixed;left:50%;bottom:0;width:100%;max-width:406px;
+    transform:translate(-50%,100%);transition:transform .28s ease;
+    background:var(--bg);z-index:41;border-radius:20px 20px 0 0;overflow:hidden;
+    max-height:92vh;display:flex;flex-direction:column;
+    box-shadow:0 -10px 30px rgba(11,60,102,0.25);
+  }
+  .sheet.open{transform:translate(-50%,0);}
+  .sheet-hero{
+    position:relative;background:linear-gradient(160deg,#0b5fa5 0%,#0d76c9 55%,#1690db 100%);
+    color:#fff;padding:16px 18px 16px;flex:none;
+  }
+  .sheet-hero svg.traces{position:absolute;inset:0;width:100%;height:100%;opacity:.35;pointer-events:none;}
+  .sheet-hero-inner{position:relative;z-index:1;}
+  .sheet-close{
+    position:absolute;top:12px;right:14px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.45);
+    color:#fff;width:26px;height:26px;border-radius:8px;cursor:pointer;font-size:13px;z-index:2;
+  }
+  .brand-row{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
+  .brand-row h2{font-size:14.5px;margin:0;font-weight:700;}
+  .sheet-hero p.greet{margin:0;font-size:12.3px;line-height:1.5;color:rgba(255,255,255,0.92);}
+  .info-strip{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+  .badge{background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:4px 8px;border-radius:8px;font-size:11px;}
+  .badge b{font-weight:600;}
+
+  .sheet-content{overflow-y:auto;padding:14px 16px 18px;flex:1;}
+  .section{margin-top:14px;}
+  .section:first-child{margin-top:0;}
+  .section-title{font-size:13px;font-weight:600;color:var(--primary-dark);margin:0 0 6px;}
+  .section-hint{font-size:11.5px;color:var(--muted);margin:0 0 8px;line-height:1.5;}
+
+  .existing-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--muted);}
+  .existing-card .row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--border);}
+  .existing-card .row:last-child{border-bottom:none;}
+
+  .item-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px;position:relative;}
+  .item-card::before{content:"";position:absolute;left:12px;top:0;width:24px;height:3px;background:var(--pad);border-radius:0 0 3px 3px;}
+  .item-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .item-num{font-size:11px;color:var(--muted);}
+  .item-remove{border:none;background:none;color:var(--muted);font-size:12px;cursor:pointer;padding:2px 5px;}
+  .item-remove:hover{color:var(--danger);}
+
+  label{display:block;font-size:11.5px;color:var(--muted);margin:9px 0 4px;}
+  label:first-of-type{margin-top:0;}
+  input[type=text],input[type=number],input[type=url],textarea,select{
+    width:100%;padding:8px 10px;border:1.4px solid var(--border);border-radius:9px;
+    font-size:13px;font-family:inherit;color:var(--text);background:#fbfdff;
+  }
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary);background:#fff;}
+  textarea{resize:vertical;min-height:50px;}
+  .field-row{display:flex;gap:8px;}
+  .field-row > div{flex:1;}
+  .catalog-flag{font-size:11px;margin-top:4px;display:none;}
+  .catalog-flag.ok{color:var(--ok);display:block;}
+  .catalog-flag.warn{color:var(--warn);display:block;}
+  .field-error{font-size:11px;color:var(--danger);margin-top:3px;display:none;}
+  .invalid{border-color:var(--danger) !important;}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;border-radius:10px;font-size:13.5px;font-weight:600;border:none;cursor:pointer;width:100%;font-family:inherit;}
+  .btn-add{background:#fff;color:var(--primary);border:1.5px dashed var(--pad);}
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-primary:disabled{background:#9db9cc;cursor:not-allowed;}
+
+  .checklist{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:4px 12px;}
+  .check-row{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid #f0f6fb;font-size:12.5px;}
+  .check-row:last-child{border-bottom:none;}
+  .check-row input{width:16px;height:16px;margin-top:2px;flex:none;}
+
+  .limit-note{font-size:11.3px;color:var(--muted);text-align:center;margin-top:7px;}
+  .status-msg{font-size:12.3px;text-align:center;padding:8px;border-radius:9px;margin-bottom:10px;display:none;}
+  .status-msg.show{display:block;background:var(--warn-bg);color:var(--warn);}
+
+  .done-screen{
+    position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:28px;text-align:center;z-index:5;
+  }
+  .done-screen h2{color:var(--primary-dark);font-size:16px;margin:12px 0 6px;}
+  .done-screen p{color:var(--muted);font-size:12.5px;line-height:1.6;max-width:280px;}
+  .hidden{display:none !important;}
+
+  @media (max-width:768px){
+    .layout{flex-direction:column;}
+    .phone{max-width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="intro">
+    <h1>Заявка IT в бюджет MTK — визуализация проекта</h1>
+    <p>Интерактивный прототип Telegram-бота и Mini App формы, описанных в <code>PRD.md</code> и реализованных в <code>Code.gs</code> / <code>Form.html</code>. Работает полностью локально, в браузере: Telegram и Google Sheets заменены имитацией (данные заявок хранятся в <code>localStorage</code> этой вкладки).</p>
+    <div class="tag">
+      <span>7 подразделений</span>
+      <span>до 20 позиций в заявке</span>
+      <span>1 активная заявка на отдел/год</span>
+      <span>бюджетный год: <b class="mono" id="yearTag"></b></span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="phone">
+      <div class="phone-top">
+        <div class="chip-mark">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <rect x="7" y="7" width="10" height="10" rx="1.5" stroke="#fff" stroke-width="1.6"/>
+            <path d="M9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="bot-name">Заявка IT в бюджет MTK<span>бот · имитация чата</span></div>
+        <button id="resetBtn" title="Сбросить демо-данные и начать заново">⟲</button>
+      </div>
+      <div class="chat-body" id="chatBody"></div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h3>Как читать эту визуализацию</h3>
+        Слева — переписка с ботом: <code>/start</code> → выбор отдела → форма → подтверждение.
+        Нажмите на кнопку отдела, чтобы пройти сценарий. Если у отдела уже есть черновик заявки,
+        бот предложит дополнить её вместо создания второй.
+      </div>
+      <div class="card">
+        <h3>Что здесь настоящее, а что — имитация</h3>
+        Тексты бота, список отделов, правила валидации, лимит 20 позиций, чек-лист
+        «Не забыли ли вы про…» и вёрстка формы — взяты как есть из <code>Code.gs</code> и
+        <code>Form.html</code>. Отправка Telegram-сообщений и запись в Google Sheets заменены
+        на <code>localStorage</code> — в реальном боте это делают <code>sendMessage()</code> и
+        листы «Заявки»/«Позиции».
+      </div>
+      <div class="card">
+        <h3>Сброс демо</h3>
+        Кнопка <b>⟲</b> в шапке чата очищает сохранённые в браузере заявки и начинает диалог заново
+        — удобно, чтобы повторно увидеть сценарий «новая заявка» после того, как один раз она была создана.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="overlay" class="overlay hidden"></div>
+<div id="sheet" class="sheet hidden">
+  <button type="button" class="sheet-close" id="sheetClose">✕</button>
+  <div class="sheet-hero">
+    <svg class="traces" viewBox="0 0 400 160" preserveAspectRatio="none">
+      <g stroke="#ffffff" stroke-width="1" fill="none">
+        <path d="M0 30 H90 V10 H160 V50 H400" />
+        <path d="M0 90 H60 V120 H220 V70 H400" />
+        <path d="M0 150 H130 V130 H300 V150 H400" />
+      </g>
+      <g fill="#ffffff">
+        <circle cx="90" cy="30" r="3"/><circle cx="160" cy="10" r="3"/><circle cx="160" cy="50" r="3"/>
+        <circle cx="60" cy="90" r="3"/><circle cx="220" cy="120" r="3"/><circle cx="220" cy="70" r="3"/>
+        <circle cx="130" cy="150" r="3"/><circle cx="300" cy="130" r="3"/>
+      </g>
+    </svg>
+    <div class="sheet-hero-inner">
+      <div class="brand-row">
+        <div class="chip-mark">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <rect x="7" y="7" width="10" height="10" rx="1.5" stroke="#fff" stroke-width="1.6"/>
+            <path d="M9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h2>Заявка IT в бюджет MTK</h2>
+      </div>
+      <p class="greet" id="sheetGreet"></p>
+      <div class="info-strip" id="sheetBadges"></div>
+    </div>
+  </div>
+
+  <div class="sheet-content">
+    <div class="section hidden" id="existingSection">
+      <p class="section-title">Уже внесено в эту заявку</p>
+      <div class="existing-card" id="existingList"></div>
+    </div>
+
+    <div class="section">
+      <p class="section-title" id="itemsTitle">Список оборудования</p>
+      <p class="section-hint" id="itemsHint"></p>
+      <div id="status" class="status-msg"></div>
+      <div id="items"></div>
+      <button type="button" class="btn btn-add" id="addBtn">+ Добавить товар</button>
+    </div>
+
+    <div class="section">
+      <p class="section-title">Не забыли ли вы про…</p>
+      <p class="section-hint">Бюджет формируется заранее, на следующий год — отметьте то, что может понадобиться, и мы добавим это отдельной позицией, чтобы вы дозаполнили количество и обоснование.</p>
+      <div class="checklist" id="checklist"></div>
+    </div>
+
+    <div class="section" style="margin-bottom:6px;">
+      <button type="button" class="btn btn-primary" id="submitBtn">Отправить заявку</button>
+      <p class="limit-note" id="limitNote"></p>
+    </div>
+  </div>
+
+  <div id="doneScreen" class="done-screen hidden">
+    <svg width="42" height="42" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#1f8a57" stroke-width="1.6"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke="#1f8a57" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h2>Заявка отправлена</h2>
+    <p>Подтверждение и список принятых позиций пришли в чат с ботом. Это окно можно закрыть.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ==================== константы (как в Code.gs) ====================
+  var DEPARTMENTS = {
+    D1: 'Отдел закупа',
+    D2: 'Юридическая группа',
+    D3: 'Группа бюджетирования',
+    D4: 'Административно-хозяйственная группа',
+    D5: 'Производственно-технический отдел',
+    D6: 'Сектор производственных отношений',
+    D7: 'Отдел кадров'
+  };
+  var UNIT_OPTIONS = ['шт.', 'компл.', 'уп.', 'пара', 'м', 'кг', 'лицензия', 'коробка'];
+  var FORGOTTEN_CHECKLIST = [
+    'Компьютерная мышь','Клавиатура','Гарнитура (наушники с микрофоном)','Веб-камера',
+    'Дополнительный монитор','ИБП (источник бесперебойного питания)','USB-хаб / докинг-станция',
+    'Сетевой кабель (патч-корд)','Сетевой фильтр / удлинитель','Внешний накопитель / флеш-память',
+    'Картридж или тонер для принтера','МФУ / принтер','Лицензия на программное обеспечение'
+  ];
+  var CATALOG = ['Ноутбук бизнес-класса 14"', 'Монитор 24"', 'МФУ лазерное А4'];
+  var MAX_ITEMS_PER_REQUEST = 20;
+  var JUSTIFICATION_MIN_LENGTH = 8;
+  var BUDGET_YEAR = new Date().getFullYear() + 1;
+  document.getElementById('yearTag').textContent = BUDGET_YEAR;
+  var catalogLower = CATALOG.map(function(c){ return c.toLowerCase(); });
+
+  // ==================== имитация "Google Sheets" в localStorage ====================
+  // (с откатом на память в памяти вкладки, если localStorage недоступен —
+  // например, при просмотре файла в изолированном превью)
+  var LS_REQ = 'itbudget_demo_requests';
+  var LS_ITEMS = 'itbudget_demo_items';
+  var memoryFallback = { requests: [], items: {} };
+  var storageOk = true;
+  try { localStorage.setItem('__itbudget_probe__','1'); localStorage.removeItem('__itbudget_probe__'); } catch(e){ storageOk = false; }
+
+  function getRequests(){
+    if (!storageOk) return memoryFallback.requests;
+    try { return JSON.parse(localStorage.getItem(LS_REQ)) || []; } catch(e){ return []; }
+  }
+  function saveRequests(list){
+    if (!storageOk){ memoryFallback.requests = list; return; }
+    try { localStorage.setItem(LS_REQ, JSON.stringify(list)); } catch(e){ memoryFallback.requests = list; }
+  }
+  function getAllItems(){
+    if (!storageOk) return memoryFallback.items;
+    try { return JSON.parse(localStorage.getItem(LS_ITEMS)) || {}; } catch(e){ return {}; }
+  }
+  function saveAllItems(map){
+    if (!storageOk){ memoryFallback.items = map; return; }
+    try { localStorage.setItem(LS_ITEMS, JSON.stringify(map)); } catch(e){ memoryFallback.items = map; }
+  }
+
+  function findActiveRequest(dept, year){
+    var list = getRequests();
+    for (var i=0;i<list.length;i++){
+      var r = list[i];
+      if (r.dept === dept && Number(r.year) === Number(year) && r.status !== 'Закрыта') return r;
+    }
+    return null;
+  }
+  function generateRequestId(deptCode, year){
+    var count = getRequests().filter(function(r){ return r.id.indexOf(deptCode + '-' + year) === 0; }).length;
+    var seq = String(count + 1).padStart(3, '0');
+    return deptCode + '-' + year + '-' + seq;
+  }
+  function addRequestRow(reqId, dept, deptCode, year){
+    var list = getRequests();
+    var now = new Date().toISOString();
+    list.push({ id: reqId, dept: dept, deptCode: deptCode, year: year, status: 'Черновик', created: now, updated: now, count: 0 });
+    saveRequests(list);
+  }
+  function getItemsForRequest(reqId){
+    var map = getAllItems();
+    return map[reqId] || [];
+  }
+  function appendItems(reqId, items){
+    var map = getAllItems();
+    map[reqId] = (map[reqId] || []).concat(items);
+    saveAllItems(map);
+  }
+  function updateRequestSummary(reqId){
+    var list = getRequests();
+    for (var i=0;i<list.length;i++){
+      if (list[i].id === reqId){
+        var count = getItemsForRequest(reqId).length;
+        list[i].updated = new Date().toISOString();
+        list[i].count = count;
+        if (count >= MAX_ITEMS_PER_REQUEST) list[i].status = 'Черновик (лимит)';
+        break;
+      }
+    }
+    saveRequests(list);
+  }
+  function fmtDate(iso){
+    var d = new Date(iso);
+    function pad(n){ return String(n).padStart(2,'0'); }
+    return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+
+  // ==================== чат бота ====================
+  var chatBody = document.getElementById('chatBody');
+
+  function addMessage(text){
+    var el = document.createElement('div');
+    el.className = 'msg';
+    el.textContent = text;
+    chatBody.appendChild(el);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    return el;
+  }
+  function addButtons(buttons){
+    var wrap = document.createElement('div');
+    wrap.className = 'kb';
+    buttons.forEach(function(b){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = b.text;
+      btn.addEventListener('click', function(){
+        Array.prototype.forEach.call(wrap.querySelectorAll('button'), function(x){ x.disabled = true; });
+        btn.classList.add('chosen');
+        b.onClick();
+      });
+      wrap.appendChild(btn);
+    });
+    chatBody.appendChild(wrap);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    return wrap;
+  }
+
+  function startChat(){
+    chatBody.innerHTML = '';
+    addMessage('Здравствуйте! 👋\n\nЭто бот «Заявка IT в бюджет MTK» — здесь собираются заявки на офисное IT-оборудование при формировании бюджета на ' + BUDGET_YEAR + ' год.\n\nВыберите ваше структурное подразделение:');
+    addButtons(Object.keys(DEPARTMENTS).map(function(code){
+      return { text: DEPARTMENTS[code], onClick: function(){ openDepartmentFlow(code); } };
+    }));
+  }
+
+  function openDepartmentFlow(deptCode){
+    var dept = DEPARTMENTS[deptCode];
+    var existing = findActiveRequest(dept, BUDGET_YEAR);
+    if (existing){
+      addMessage('У подразделения «' + dept + '» уже есть активная заявка на ' + BUDGET_YEAR + ' год.\n' +
+        'Номер: ' + existing.id + '\n' +
+        'Позиций внесено: ' + existing.count + ' из ' + MAX_ITEMS_PER_REQUEST + '\n' +
+        'Последнее изменение: ' + fmtDate(existing.updated) + '\n\n' +
+        'Чтобы не создавать вторую заявку по этому же подразделению, дополните существующую.');
+      addButtons([
+        { text: '➕ Дополнить заявку', onClick: function(){ openWebApp(deptCode, existing.id); } },
+        { text: '📋 Показать список позиций', onClick: function(){ showRequestSummary(deptCode, existing.id); } }
+      ]);
+    } else {
+      openWebApp(deptCode, '');
+    }
+  }
+
+  function showRequestSummary(deptCode, reqId){
+    var items = getItemsForRequest(reqId);
+    if (!items.length){ addMessage('В заявке ' + reqId + ' пока нет позиций.'); return; }
+    var lines = items.map(function(it,i){ return (i+1) + '. ' + it.name + ' — ' + it.qty + ' ' + it.unit; });
+    addMessage('Заявка ' + reqId + ', внесённые позиции:\n\n' + lines.join('\n'));
+    addButtons([{ text: '➕ Дополнить заявку', onClick: function(){ openWebApp(deptCode, reqId); } }]);
+  }
+
+  function openWebApp(deptCode, reqId){
+    addMessage(reqId ? 'Открываю заявку для дополнения:' : 'Открываю форму новой заявки:');
+    addButtons([{ text: '🧾 Открыть форму', onClick: function(){ openForm(deptCode, reqId); } }]);
+  }
+
+  // ==================== форма (Mini App) ====================
+  var sheet = document.getElementById('sheet');
+  var overlay = document.getElementById('overlay');
+  var itemsEl = document.getElementById('items');
+  var addBtn = document.getElementById('addBtn');
+  var submitBtn = document.getElementById('submitBtn');
+  var limitNote = document.getElementById('limitNote');
+  var statusEl = document.getElementById('status');
+  var checklistEl = document.getElementById('checklist');
+  var existingSection = document.getElementById('existingSection');
+  var existingList = document.getElementById('existingList');
+  var doneScreen = document.getElementById('doneScreen');
+
+  var datalist = document.createElement('datalist');
+  datalist.id = 'catalogList';
+  CATALOG.forEach(function(name){
+    var opt = document.createElement('option');
+    opt.value = name;
+    datalist.appendChild(opt);
+  });
+  document.body.appendChild(datalist);
+
+  var formCtx = { deptCode:'', dept:'', reqId:'', remaining:MAX_ITEMS_PER_REQUEST, rowCount:0 };
+
+  function unitOptionsHtml(selected){
+    return UNIT_OPTIONS.map(function(u){
+      return '<option value="'+u+'"'+(u===selected?' selected':'')+'>'+u+'</option>';
+    }).join('');
+  }
+
+  function updateLimitState(){
+    var left = formCtx.remaining - itemsEl.querySelectorAll('.item-card').length;
+    addBtn.style.display = left > 0 ? '' : 'none';
+    limitNote.textContent = left > 0
+      ? 'Можно добавить ещё '+left+' поз. (лимит заявки — 20 неоднородных товаров).'
+      : 'Достигнут лимит позиций для этой заявки.';
+  }
+
+  function renumber(){
+    var cards = itemsEl.querySelectorAll('.item-card');
+    formCtx.rowCount = cards.length;
+    cards.forEach(function(c,i){ c.querySelector('.item-num').textContent = 'Товар '+(i+1); });
+  }
+
+  function addRow(prefillName){
+    if (itemsEl.querySelectorAll('.item-card').length >= formCtx.remaining){ updateLimitState(); return; }
+    formCtx.rowCount++;
+    var card = document.createElement('div');
+    card.className = 'item-card';
+    card.innerHTML =
+      '<div class="item-head"><span class="item-num">Товар '+formCtx.rowCount+'</span>' +
+      '<button type="button" class="item-remove" data-remove>✕ убрать</button></div>' +
+      '<label>Наименование товара *</label>' +
+      '<input type="text" list="catalogList" data-field="name" maxlength="150" placeholder="Начните вводить название...">' +
+      '<div class="catalog-flag" data-flag></div>' +
+      '<label>Обоснование (для бюджета) *</label>' +
+      '<textarea data-field="justification" minlength="'+JUSTIFICATION_MIN_LENGTH+'" placeholder="Например: замена вышедшего из строя оборудования / для нового сотрудника"></textarea>' +
+      '<div class="field-error" data-error="justification">Минимум '+JUSTIFICATION_MIN_LENGTH+' символов.</div>' +
+      '<div class="field-row">' +
+        '<div><label>Количество *</label><input type="number" min="1" step="1" data-field="qty" placeholder="1"></div>' +
+        '<div><label>Ед. изм.</label><select data-field="unit">'+unitOptionsHtml(UNIT_OPTIONS[0])+'</select></div>' +
+      '</div>' +
+      '<label>Ссылка на товар (необязательно)</label>' +
+      '<input type="url" data-field="link" placeholder="https://...">';
+    itemsEl.appendChild(card);
+
+    var nameInput = card.querySelector('[data-field="name"]');
+    var flag = card.querySelector('[data-flag]');
+    nameInput.addEventListener('input', function(){
+      var v = nameInput.value.trim().toLowerCase();
+      if (!v){ flag.className='catalog-flag'; flag.textContent=''; return; }
+      if (catalogLower.indexOf(v) !== -1){
+        flag.className='catalog-flag ok'; flag.textContent='✓ Есть в IT-каталоге';
+      } else {
+        flag.className='catalog-flag warn'; flag.textContent='⚠ Не найдено в каталоге — заявка уйдёт на ручную сверку IT-отделом';
+      }
+    });
+
+    if (prefillName){
+      nameInput.value = prefillName;
+      nameInput.dispatchEvent(new Event('input'));
+      card.querySelector('[data-field="justification"]').focus();
+    }
+
+    card.querySelector('[data-remove]').addEventListener('click', function(){
+      card.remove();
+      renumber();
+      updateLimitState();
+    });
+
+    updateLimitState();
+  }
+
+  function openForm(deptCode, reqId){
+    formCtx.deptCode = deptCode;
+    formCtx.dept = DEPARTMENTS[deptCode];
+    formCtx.reqId = reqId || '';
+    var existingItems = reqId ? getItemsForRequest(reqId) : [];
+    formCtx.remaining = MAX_ITEMS_PER_REQUEST - existingItems.length;
+    formCtx.rowCount = 0;
+
+    document.getElementById('sheetGreet').textContent =
+      'Здравствуйте! Эта форма поможет собрать заявку на офисное IT-оборудование от вашего подразделения на ' + BUDGET_YEAR + ' год. Заполнять просто — шаг за шагом, ничего технического знать не нужно.';
+    document.getElementById('sheetBadges').innerHTML =
+      '<span class="badge">Подразделение: <b>'+formCtx.dept+'</b></span>' +
+      '<span class="badge mono">Год бюджета: <b>'+BUDGET_YEAR+'</b></span>' +
+      (reqId ? '<span class="badge mono">Заявка: <b>'+reqId+'</b></span>' : '');
+
+    if (existingItems.length){
+      existingSection.classList.remove('hidden');
+      existingList.innerHTML = existingItems.map(function(it){
+        return '<div class="row"><span>'+it.name+'</span><span>'+it.qty+' '+it.unit+'</span></div>';
+      }).join('');
+    } else {
+      existingSection.classList.add('hidden');
+      existingList.innerHTML = '';
+    }
+
+    document.getElementById('itemsTitle').textContent = existingItems.length ? 'Добавить новые позиции' : 'Список оборудования';
+    document.getElementById('itemsHint').textContent =
+      'Название сверяется с IT-каталогом. Можно добавить до ' + formCtx.remaining + ' позиций в этой сессии (общий лимит заявки — 20 неоднородных товаров). Обязательные поля отмечены — их нельзя оставить пустыми.';
+
+    itemsEl.innerHTML = '';
+    statusEl.className = 'status-msg';
+    statusEl.textContent = '';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Отправить заявку';
+    doneScreen.classList.add('hidden');
+
+    checklistEl.innerHTML = '';
+    FORGOTTEN_CHECKLIST.forEach(function(label, idx){
+      var row = document.createElement('label');
+      row.className = 'check-row';
+      row.innerHTML = '<input type="checkbox" data-check="'+idx+'"><span>'+label+'</span>';
+      checklistEl.appendChild(row);
+      row.querySelector('input').addEventListener('change', function(e){
+        if (e.target.checked) addRow(label);
+      });
+    });
+
+    if (formCtx.remaining <= 0){
+      addBtn.style.display = 'none';
+      submitBtn.disabled = true;
+      limitNote.textContent = 'Лимит 20 позиций для этой заявки уже достигнут. Обратитесь в IT-отдел для отдельного согласования.';
+    } else {
+      addRow();
+    }
+
+    overlay.classList.remove('hidden');
+    sheet.classList.remove('hidden');
+    requestAnimationFrame(function(){
+      overlay.classList.add('open');
+      sheet.classList.add('open');
+    });
+  }
+
+  function closeForm(){
+    overlay.classList.remove('open');
+    sheet.classList.remove('open');
+    setTimeout(function(){ overlay.classList.add('hidden'); sheet.classList.add('hidden'); }, 280);
+  }
+
+  document.getElementById('sheetClose').addEventListener('click', closeForm);
+  overlay.addEventListener('click', closeForm);
+  addBtn.addEventListener('click', function(){ addRow(); });
+
+  function showStatus(text){
+    statusEl.textContent = text;
+    statusEl.className = 'status-msg show';
+  }
+
+  submitBtn.addEventListener('click', function(){
+    var cards = Array.prototype.slice.call(itemsEl.querySelectorAll('.item-card'));
+    if (!cards.length){ showStatus('Добавьте хотя бы одну позицию.'); return; }
+
+    var rawItems = [];
+    var hasError = false;
+
+    cards.forEach(function(card){
+      var nameEl = card.querySelector('[data-field="name"]');
+      var justEl = card.querySelector('[data-field="justification"]');
+      var qtyEl = card.querySelector('[data-field="qty"]');
+      var jErr = card.querySelector('[data-error="justification"]');
+
+      var name = nameEl.value.trim();
+      var justification = justEl.value.trim();
+      var qty = parseInt(qtyEl.value, 10);
+      var unit = card.querySelector('[data-field="unit"]').value;
+      var link = card.querySelector('[data-field="link"]').value.trim();
+
+      nameEl.classList.remove('invalid'); justEl.classList.remove('invalid'); qtyEl.classList.remove('invalid');
+      jErr.style.display = 'none';
+
+      if (!name){ nameEl.classList.add('invalid'); hasError = true; }
+      if (!justification || justification.length < JUSTIFICATION_MIN_LENGTH){ justEl.classList.add('invalid'); jErr.style.display='block'; hasError = true; }
+      if (!qty || qty < 1){ qtyEl.classList.add('invalid'); hasError = true; }
+
+      rawItems.push({ name:name, justification:justification, qty:qty, unit:unit, link:link });
+    });
+
+    if (hasError){ showStatus('Проверьте отмеченные поля — они обязательны для заполнения.'); return; }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Отправка...';
+
+    // ==== имитация handleMiniAppSubmit() из Code.gs ====
+    var dept = formCtx.dept, deptCode = formCtx.deptCode, year = BUDGET_YEAR;
+    var reqId = formCtx.reqId;
+    var isNew = !reqId;
+    if (isNew){
+      reqId = generateRequestId(deptCode, year);
+      addRequestRow(reqId, dept, deptCode, year);
+    }
+
+    var existingCount = getItemsForRequest(reqId).length;
+    var slotsLeft = MAX_ITEMS_PER_REQUEST - existingCount;
+    var accepted = [], rejected = [];
+
+    rawItems.forEach(function(item){
+      if (accepted.length >= slotsLeft){
+        rejected.push({ name: item.name, reason: 'превышен лимит ' + MAX_ITEMS_PER_REQUEST + ' позиций в заявке' });
+        return;
+      }
+      if (!item.name || !item.justification || !item.qty || item.qty < 1){
+        rejected.push({ name: item.name || '(без названия)', reason: 'не заполнены обязательные поля' });
+        return;
+      }
+      if (item.justification.length < JUSTIFICATION_MIN_LENGTH){
+        rejected.push({ name: item.name, reason: 'обоснование короче ' + JUSTIFICATION_MIN_LENGTH + ' символов' });
+        return;
+      }
+      var inCatalog = catalogLower.indexOf(item.name.toLowerCase()) !== -1;
+      accepted.push({ name:item.name, inCatalog:inCatalog, justification:item.justification, qty:item.qty, unit:item.unit, link:item.link });
+    });
+
+    if (accepted.length){
+      appendItems(reqId, accepted);
+      updateRequestSummary(reqId);
+    }
+
+    setTimeout(function(){
+      doneScreen.classList.remove('hidden');
+      setTimeout(function(){
+        closeForm();
+        postConfirmation(isNew, dept, reqId, year, accepted, rejected);
+      }, 1400);
+    }, 350);
+  });
+
+  function postConfirmation(isNew, dept, reqId, year, accepted, rejected){
+    var text = '';
+    if (isNew && accepted.length){
+      text += 'Заявка ' + reqId + ' по подразделению «' + dept + '» на ' + year + ' год создана.\n\n';
+    } else if (accepted.length){
+      text += 'Заявка ' + reqId + ' дополнена.\n\n';
+    }
+    if (accepted.length){
+      text += 'Принято позиций: ' + accepted.length + '\n';
+      accepted.forEach(function(it,i){
+        text += (i+1) + '. ' + it.name + (it.inCatalog ? '' : ' ⚠️ нет в каталоге') + ' — ' + it.qty + ' ' + it.unit + '\n';
+      });
+    }
+    if (rejected.length){
+      text += '\nНе приняты (исправьте и отправьте повторно):\n';
+      rejected.forEach(function(r){ text += '• ' + r.name + ' — ' + r.reason + '\n'; });
+    }
+    if (!accepted.length && !rejected.length){
+      text = 'Заявка получена, но не содержит позиций.';
+    }
+    addMessage(text.trim());
+    addButtons([{ text: '⬅ Вернуться к списку отделов', onClick: startChat }]);
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    memoryFallback = { requests: [], items: {} };
+    if (storageOk){
+      try { localStorage.removeItem(LS_REQ); localStorage.removeItem(LS_ITEMS); } catch(e){}
+    }
+    startChat();
+  });
+
+  startChat();
+})();
+</script>
+</body>
+</html>

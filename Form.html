@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{
+    --bg:#eaf4fb;
+    --white:#ffffff;
+    --primary:#0b5fa5;
+    --primary-dark:#073a66;
+    --trace:#bfe0f5;
+    --pad:#4fa8e0;
+    --text:#16283a;
+    --muted:#5b7185;
+    --border:#d7e9f7;
+    --warn:#b9720a;
+    --warn-bg:#fdf3e2;
+    --ok:#1f8a57;
+    --ok-bg:#e9f7ef;
+    --danger:#b23a3a;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:96px;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .shell{max-width:560px;margin:0 auto;padding:0 16px;}
+
+  /* ---- header / hero with circuit motif ---- */
+  .hero{
+    position:relative;
+    background:linear-gradient(160deg,#0b5fa5 0%,#0d76c9 55%,#1690db 100%);
+    color:#fff;
+    padding:26px 20px 22px;
+    overflow:hidden;
+  }
+  .hero svg.traces{
+    position:absolute; inset:0; width:100%; height:100%;
+    opacity:0.35; pointer-events:none;
+  }
+  .hero-inner{position:relative; z-index:1; max-width:560px; margin:0 auto;}
+  .chip-mark{
+    width:34px;height:34px;border-radius:7px;
+    background:rgba(255,255,255,0.14);
+    border:1.5px solid rgba(255,255,255,0.55);
+    display:flex;align-items:center;justify-content:center;
+    flex:none;
+  }
+  .brand-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .brand-row h1{font-size:17px;line-height:1.3;margin:0;font-weight:700;letter-spacing:.2px;}
+  .hero p.greet{margin:0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);}
+
+  .info-strip{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
+  .badge{
+    background:rgba(255,255,255,0.16);
+    border:1px solid rgba(255,255,255,0.4);
+    color:#fff;
+    padding:6px 10px;
+    border-radius:8px;
+    font-size:12.5px;
+  }
+  .badge b{font-weight:600;}
+
+  /* ---- content ---- */
+  .section{margin-top:18px;}
+  .section-title{font-size:14px;font-weight:600;color:var(--primary-dark);margin:0 0 8px;}
+  .section-hint{font-size:12.5px;color:var(--muted);margin:0 0 10px;line-height:1.5;}
+
+  .existing-card{
+    background:var(--white);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:12px 14px;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .existing-card .row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--border);}
+  .existing-card .row:last-child{border-bottom:none;}
+
+  .item-card{
+    background:var(--white);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px;
+    margin-bottom:12px;
+    position:relative;
+  }
+  .item-card::before{
+    content:"";
+    position:absolute; left:14px; top:0; width:26px; height:3px;
+    background:var(--pad); border-radius:0 0 3px 3px;
+  }
+  .item-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .item-num{font-size:12px;color:var(--muted);}
+  .item-remove{
+    border:none;background:none;color:var(--muted);
+    font-size:13px;cursor:pointer;padding:2px 6px;
+  }
+  .item-remove:hover{color:var(--danger);}
+
+  label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 5px;}
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=number], input[type=url], textarea, select{
+    width:100%;
+    padding:9px 11px;
+    border:1.4px solid var(--border);
+    border-radius:9px;
+    font-size:14px;
+    font-family:inherit;
+    color:var(--text);
+    background:#fbfdff;
+  }
+  input:focus, textarea:focus, select:focus{
+    outline:none; border-color:var(--primary); background:#fff;
+  }
+  textarea{resize:vertical; min-height:56px;}
+  .field-row{display:flex; gap:10px;}
+  .field-row > div{flex:1;}
+  .catalog-flag{font-size:11.5px; margin-top:5px; display:none;}
+  .catalog-flag.ok{color:var(--ok); display:block;}
+  .catalog-flag.warn{color:var(--warn); display:block;}
+  .field-error{font-size:11.5px; color:var(--danger); margin-top:4px; display:none;}
+  .invalid{border-color:var(--danger) !important;}
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    padding:11px 16px; border-radius:10px; font-size:14px; font-weight:600;
+    border:none; cursor:pointer; width:100%; font-family:inherit;
+  }
+  .btn-add{
+    background:#fff; color:var(--primary); border:1.5px dashed var(--pad);
+  }
+  .btn-primary{
+    background:var(--primary); color:#fff;
+  }
+  .btn-primary:disabled{background:#9db9cc; cursor:not-allowed;}
+
+  .checklist{background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:6px 14px;}
+  .check-row{display:flex; align-items:flex-start; gap:9px; padding:9px 0; border-bottom:1px solid #f0f6fb; font-size:13.5px;}
+  .check-row:last-child{border-bottom:none;}
+  .check-row input{width:17px;height:17px;margin-top:2px; flex:none;}
+
+  .footer-bar{
+    position:fixed; left:0; right:0; bottom:0;
+    background:linear-gradient(180deg, rgba(234,244,251,0) 0%, var(--bg) 30%);
+    padding:14px 16px 16px;
+  }
+  .footer-inner{max-width:560px; margin:0 auto;}
+  .limit-note{font-size:12px; color:var(--muted); text-align:center; margin-top:7px;}
+
+  .status-msg{font-size:13px; text-align:center; padding:8px; border-radius:9px; margin-bottom:10px; display:none;}
+  .status-msg.show{display:block;}
+  .status-msg.warn{background:var(--warn-bg); color:var(--warn);}
+
+  .done-screen{
+    position:fixed; inset:0; background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:32px; text-align:center; z-index:50;
+  }
+  .done-screen h2{color:var(--primary-dark); font-size:18px; margin:14px 0 8px;}
+  .done-screen p{color:var(--muted); font-size:13.5px; line-height:1.6; max-width:320px;}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <svg class="traces" viewBox="0 0 400 160" preserveAspectRatio="none">
+    <g stroke="#ffffff" stroke-width="1" fill="none">
+      <path d="M0 30 H90 V10 H160 V50 H400" />
+      <path d="M0 90 H60 V120 H220 V70 H400" />
+      <path d="M0 150 H130 V130 H300 V150 H400" />
+    </g>
+    <g fill="#ffffff">
+      <circle cx="90" cy="30" r="3"/><circle cx="160" cy="10" r="3"/><circle cx="160" cy="50" r="3"/>
+      <circle cx="60" cy="90" r="3"/><circle cx="220" cy="120" r="3"/><circle cx="220" cy="70" r="3"/>
+      <circle cx="130" cy="150" r="3"/><circle cx="300" cy="130" r="3"/>
+    </g>
+  </svg>
+  <div class="hero-inner">
+    <div class="brand-row">
+      <div class="chip-mark">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <rect x="7" y="7" width="10" height="10" rx="1.5" stroke="#fff" stroke-width="1.6"/>
+          <path d="M9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Заявка IT в бюджет MTK</h1>
+    </div>
+    <p class="greet">Здравствуйте! Эта форма поможет собрать заявку на офисное IT‑оборудование
+      от вашего подразделения на <?= year ?> год. Заполнять просто — шаг за шагом, ничего технического знать не нужно.</p>
+    <div class="info-strip">
+      <span class="badge">Подразделение: <b><?= department ?></b></span>
+      <span class="badge mono">Год бюджета: <b><?= year ?></b></span>
+      <? if (reqId) { ?><span class="badge mono">Заявка: <b><?= reqId ?></b></span><? } ?>
+    </div>
+  </div>
+</div>
+
+<div class="shell">
+
+  <? if (existingItems.length) { ?>
+  <div class="section">
+    <p class="section-title">Уже внесено в эту заявку</p>
+    <div class="existing-card">
+      <? for (var i = 0; i < existingItems.length; i++) { ?>
+        <div class="row"><span><?= existingItems[i].name ?></span><span><?= existingItems[i].qty ?> <?= existingItems[i].unit ?></span></div>
+      <? } ?>
+    </div>
+  </div>
+  <? } ?>
+
+  <div class="section">
+    <p class="section-title"><?= existingItems.length ? 'Добавить новые позиции' : 'Список оборудования' ?></p>
+    <p class="section-hint">Название сверяется с IT‑каталогом. Можно добавить до <?= remaining ?> позиций
+      в этой сессии (общий лимит заявки — 20 неоднородных товаров). Обязательные поля отмечены — их нельзя оставить пустыми.</p>
+    <div id="status" class="status-msg warn"></div>
+    <div id="items"></div>
+    <button type="button" class="btn btn-add" id="addBtn">+ Добавить товар</button>
+  </div>
+
+  <div class="section">
+    <p class="section-title">Не забыли ли вы про…</p>
+    <p class="section-hint">Бюджет формируется заранее, на следующий год — отметьте то, что может понадобиться,
+      и мы добавим это отдельной позицией, чтобы вы дозаполнили количество и обоснование.</p>
+    <div class="checklist" id="checklist"></div>
+  </div>
+
+  <div class="section" style="margin-bottom:110px;">
+    <button type="button" class="btn btn-primary" id="submitBtn">Отправить заявку</button>
+    <p class="limit-note" id="limitNote"></p>
+  </div>
+
+</div>
+
+<div class="footer-bar" style="display:none;"></div>
+
+<div id="doneScreen" class="done-screen" style="display:none;">
+  <svg width="46" height="46" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#1f8a57" stroke-width="1.6"/><path d="M8 12.5l2.6 2.6L16 9.6" stroke="#1f8a57" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <h2>Заявка отправлена</h2>
+  <p>Подтверждение и список принятых позиций пришли в чат с ботом. Это окно можно закрыть.</p>
+</div>
+
+<script>
+(function(){
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) { tg.ready(); tg.expand(); try{ tg.setHeaderColor('#0b5fa5'); tg.setBackgroundColor('#eaf4fb'); }catch(e){} }
+
+  var CATALOG = <?!= catalogJson ?>;
+  var UNITS = <?!= unitsJson ?>;
+  var CHECKLIST = <?!= checklistJson ?>;
+  var REMAINING = <?= remaining ?>;
+  var JMIN = <?= justificationMin ?>;
+  var DEPT_CODE = '<?= deptCode ?>';
+  var YEAR = '<?= year ?>';
+  var REQ_ID = '<?= reqId ?>';
+  var CHAT_ID = '<?= chatId ?>' || (tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? String(tg.initDataUnsafe.user.id) : '');
+  var POST_URL = '<?= postUrl ?>';
+
+  var catalogLower = CATALOG.map(function(c){return c.toLowerCase();});
+  var itemsEl = document.getElementById('items');
+  var addBtn = document.getElementById('addBtn');
+  var submitBtn = document.getElementById('submitBtn');
+  var limitNote = document.getElementById('limitNote');
+  var statusEl = document.getElementById('status');
+  var rowCount = 0;
+
+  // shared datalist for catalog autocomplete
+  var datalist = document.createElement('datalist');
+  datalist.id = 'catalogList';
+  CATALOG.forEach(function(name){
+    var opt = document.createElement('option');
+    opt.value = name;
+    datalist.appendChild(opt);
+  });
+  document.body.appendChild(datalist);
+
+  function unitOptionsHtml(selected){
+    return UNITS.map(function(u){
+      return '<option value="'+u+'"'+(u===selected?' selected':'')+'>'+u+'</option>';
+    }).join('');
+  }
+
+  function addRow(prefillName){
+    if (rowCount >= REMAINING){ updateLimitState(); return; }
+    rowCount++;
+    var id = 'row'+rowCount+'_'+Date.now();
+    var card = document.createElement('div');
+    card.className = 'item-card';
+    card.dataset.id = id;
+    card.innerHTML =
+      '<div class="item-head"><span class="item-num">Товар '+rowCount+'</span>' +
+      '<button type="button" class="item-remove" data-remove>✕ убрать</button></div>' +
+      '<label>Наименование товара *</label>' +
+      '<input type="text" list="catalogList" data-field="name" maxlength="150" placeholder="Начните вводить название...">' +
+      '<div class="catalog-flag" data-flag></div>' +
+      '<label>Обоснование (для бюджета) *</label>' +
+      '<textarea data-field="justification" minlength="'+JMIN+'" placeholder="Например: замена вышедшего из строя оборудования / для нового сотрудника"></textarea>' +
+      '<div class="field-error" data-error="justification">Минимум '+JMIN+' символов.</div>' +
+      '<div class="field-row">' +
+        '<div><label>Количество *</label><input type="number" min="1" step="1" data-field="qty" placeholder="1"></div>' +
+        '<div><label>Ед. изм.</label><select data-field="unit">'+unitOptionsHtml(UNITS[0])+'</select></div>' +
+      '</div>' +
+      '<label>Ссылка на товар (необязательно)</label>' +
+      '<input type="url" data-field="link" placeholder="https://...">';
+    itemsEl.appendChild(card);
+
+    var nameInput = card.querySelector('[data-field="name"]');
+    var flag = card.querySelector('[data-flag]');
+    nameInput.addEventListener('input', function(){
+      var v = nameInput.value.trim().toLowerCase();
+      if (!v){ flag.className='catalog-flag'; flag.textContent=''; return; }
+      if (catalogLower.indexOf(v) !== -1){
+        flag.className='catalog-flag ok'; flag.textContent='✓ Есть в IT-каталоге';
+      } else {
+        flag.className='catalog-flag warn'; flag.textContent='⚠ Не найдено в каталоге — заявка уйдёт на ручную сверку IT-отделом';
+      }
+    });
+
+    if (prefillName){
+      nameInput.value = prefillName;
+      nameInput.dispatchEvent(new Event('input'));
+      card.querySelector('[data-field="justification"]').focus();
+    }
+
+    card.querySelector('[data-remove]').addEventListener('click', function(){
+      card.remove();
+      renumber();
+      updateLimitState();
+    });
+
+    updateLimitState();
+  }
+
+  function renumber(){
+    var cards = itemsEl.querySelectorAll('.item-card');
+    rowCount = cards.length;
+    cards.forEach(function(c,i){ c.querySelector('.item-num').textContent = 'Товар '+(i+1); });
+  }
+
+  function updateLimitState(){
+    var left = REMAINING - itemsEl.querySelectorAll('.item-card').length;
+    addBtn.style.display = left > 0 ? '' : 'none';
+    limitNote.textContent = left > 0
+      ? 'Можно добавить ещё '+left+' поз. (лимит заявки — 20 неоднородных товаров).'
+      : 'Достигнут лимит позиций для этой заявки.';
+  }
+
+  addBtn.addEventListener('click', function(){ addRow(); });
+
+  // forgotten-equipment checklist
+  var checklistEl = document.getElementById('checklist');
+  CHECKLIST.forEach(function(label, idx){
+    var row = document.createElement('label');
+    row.className = 'check-row';
+    row.innerHTML = '<input type="checkbox" data-check="'+idx+'"><span>'+label+'</span>';
+    checklistEl.appendChild(row);
+    row.querySelector('input').addEventListener('change', function(e){
+      if (e.target.checked) addRow(label);
+    });
+  });
+
+  if (REMAINING <= 0){
+    addBtn.style.display='none';
+    submitBtn.disabled = true;
+    limitNote.textContent = 'Лимит 20 позиций для этой заявки уже достигнут. Обратитесь в IT-отдел для отдельного согласования.';
+  } else {
+    addRow();
+  }
+
+  function showStatus(text){
+    statusEl.textContent = text;
+    statusEl.className = 'status-msg warn show';
+  }
+
+  submitBtn.addEventListener('click', function(){
+    var cards = Array.prototype.slice.call(itemsEl.querySelectorAll('.item-card'));
+    if (!cards.length){ showStatus('Добавьте хотя бы одну позицию.'); return; }
+
+    var items = [];
+    var hasError = false;
+
+    cards.forEach(function(card){
+      var name = card.querySelector('[data-field="name"]').value.trim();
+      var justification = card.querySelector('[data-field="justification"]').value.trim();
+      var qtyRaw = card.querySelector('[data-field="qty"]').value;
+      var qty = parseInt(qtyRaw, 10);
+      var unit = card.querySelector('[data-field="unit"]').value;
+      var link = card.querySelector('[data-field="link"]').value.trim();
+
+      var nameEl = card.querySelector('[data-field="name"]');
+      var justEl = card.querySelector('[data-field="justification"]');
+      var qtyEl = card.querySelector('[data-field="qty"]');
+      var jErr = card.querySelector('[data-error="justification"]');
+
+      nameEl.classList.remove('invalid'); justEl.classList.remove('invalid'); qtyEl.classList.remove('invalid');
+      jErr.style.display='none';
+
+      if (!name){ nameEl.classList.add('invalid'); hasError = true; }
+      if (!justification || justification.length < JMIN){ justEl.classList.add('invalid'); jErr.style.display='block'; hasError = true; }
+      if (!qty || qty < 1){ qtyEl.classList.add('invalid'); hasError = true; }
+
+      items.push({name:name, justification:justification, qty:qty, unit:unit, link:link});
+    });
+
+    if (hasError){ showStatus('Проверьте отмеченные поля — они обязательны для заполнения.'); return; }
+    if (!CHAT_ID){ showStatus('Не удалось определить чат. Откройте форму заново из бота.'); return; }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Отправка...';
+
+    fetch(POST_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({
+        miniapp: true,
+        dept: DEPT_CODE,
+        year: YEAR,
+        reqId: REQ_ID,
+        chatId: CHAT_ID,
+        items: items
+      }),
+      mode: 'no-cors'
+    }).then(function(){
+      document.getElementById('doneScreen').style.display = 'flex';
+      setTimeout(function(){ if (tg) tg.close(); }, 1800);
+    }).catch(function(){
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Отправить заявку';
+      showStatus('Не удалось отправить — проверьте соединение и попробуйте ещё раз.');
+    });
+  });
+})();
+</script>
+</body>
+</html>
